@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foodie Map - Find Restaurants Near You</title>
+    
+    <!-- Bootstrap CSS from Replit theme -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-utensils me-2"></i>Foodie Map
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <div class="ms-auto d-flex">
+                    <button id="locate-me" class="btn btn-outline-light me-2">
+                        <i class="fas fa-location-crosshairs me-1"></i> Locate Me
+                    </button>
+                    <div class="input-group">
+                        <input type="text" id="search-input" class="form-control" placeholder="Search restaurants...">
+                        <button id="search-button" class="btn btn-primary" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <button id="test-api-btn" class="btn btn-outline-info ms-2" type="button" data-bs-toggle="modal" data-bs-target="#api-test-modal">
+                        <i class="fas fa-vial me-1"></i> Test API
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Filters Sidebar -->
+            <div class="col-md-3 col-lg-2" id="filters-sidebar">
+                <div class="filters-container p-3">
+                    <h4>Filters</h4>
+                    
+                    <!-- Restaurant Type Filter -->
+                    <div class="filter-section mb-4">
+                        <h5>Restaurant Type</h5>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="all" id="type-all" checked>
+                            <label class="form-check-label" for="type-all">All</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="sit-down" id="type-sit-down">
+                            <label class="form-check-label" for="type-sit-down">Sit-down</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="fast-food" id="type-fast-food">
+                            <label class="form-check-label" for="type-fast-food">Fast Food</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Cuisine Filter -->
+                    <div class="filter-section mb-4">
+                        <h5>Cuisine</h5>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="all" id="cuisine-all" checked>
+                            <label class="form-check-label" for="cuisine-all">All Cuisines</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="american" id="cuisine-american">
+                            <label class="form-check-label" for="cuisine-american">American</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="italian" id="cuisine-italian">
+                            <label class="form-check-label" for="cuisine-italian">Italian</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="mexican" id="cuisine-mexican">
+                            <label class="form-check-label" for="cuisine-mexican">Mexican</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="chinese" id="cuisine-chinese">
+                            <label class="form-check-label" for="cuisine-chinese">Chinese</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="japanese" id="cuisine-japanese">
+                            <label class="form-check-label" for="cuisine-japanese">Japanese</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="indian" id="cuisine-indian">
+                            <label class="form-check-label" for="cuisine-indian">Indian</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="thai" id="cuisine-thai">
+                            <label class="form-check-label" for="cuisine-thai">Thai</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Price Range Filter -->
+                    <div class="filter-section mb-4">
+                        <h5>Price Range</h5>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="all" id="price-all" checked>
+                            <label class="form-check-label" for="price-all">Any Price</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="1" id="price-1">
+                            <label class="form-check-label" for="price-1">$</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="2" id="price-2">
+                            <label class="form-check-label" for="price-2">$$</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="3" id="price-3">
+                            <label class="form-check-label" for="price-3">$$$</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="4" id="price-4">
+                            <label class="form-check-label" for="price-4">$$$$</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Rating Filter -->
+                    <div class="filter-section mb-4">
+                        <h5>Minimum Rating</h5>
+                        <input type="range" class="form-range" min="1" max="5" step="0.5" id="rating-slider" value="1">
+                        <div class="d-flex justify-content-between">
+                            <span>1 ⭐</span>
+                            <span id="rating-value">1 ⭐</span>
+                            <span>5 ⭐</span>
+                        </div>
+                    </div>
+                    
+                    <button id="apply-filters" class="btn btn-primary w-100">Apply Filters</button>
+                </div>
+            </div>
+            
+            <!-- Main Content Area -->
+            <div class="col-md-9 col-lg-10 d-flex flex-column" id="main-content">
+                <!-- Map Container -->
+                <div class="map-container flex-grow-1">
+                    <div id="map"></div>
+                </div>
+                
+                <!-- Restaurant List -->
+                <div class="restaurant-list-container">
+                    <div class="container-fluid py-3">
+                        <h4>Nearby Restaurants <span id="restaurant-count" class="badge bg-primary">0</span></h4>
+                        <div id="restaurant-list" class="row g-3">
+                            <!-- Restaurant cards will be dynamically added here -->
+                            <div id="no-results" class="col-12 text-center py-5">
+                                <i class="fas fa-utensils fa-3x mb-3 text-muted"></i>
+                                <h5>No restaurants found</h5>
+                                <p class="text-muted">Try adjusting your filters or search in a different area</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restaurant Detail Modal -->
+    <div class="modal fade" id="restaurant-detail-modal" tabindex="-1" aria-labelledby="restaurant-detail-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="restaurant-detail-modal-label">Restaurant Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="restaurant-detail-content">
+                    <!-- Restaurant details will be dynamically added here -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a id="restaurant-website-link" href="#" target="_blank" class="btn btn-primary">Visit Website</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS - Load these first to define the functions -->
+    <script src="{{ url_for('static', filename='js/filters.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+    
+    <!-- Google Maps API - Load this after our scripts to call the functions -->
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=initMap" async defer></script>
+    
+    <!-- API Test Modal -->
+    <div class="modal fade" id="api-test-modal" tabindex="-1" aria-labelledby="api-test-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="api-test-modal-label">Test Google Places API</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="api-test-loading" class="text-center py-3">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Testing API connectivity...</p>
+                    </div>
+                    <div id="api-test-results" class="d-none">
+                        <!-- Test results will be displayed here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button id="run-api-test-btn" type="button" class="btn btn-primary">Run Test</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden div for Places Service -->
+    <div id="places-attribution" style="display: none;"></div>
+    
+    <script>
+        // API Test functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Run API test when button is clicked
+            document.getElementById('run-api-test-btn').addEventListener('click', runApiTest);
+            
+            // Also run test when the modal is shown
+            const apiTestModal = document.getElementById('api-test-modal');
+            apiTestModal.addEventListener('shown.bs.modal', runApiTest);
+            
+            function runApiTest() {
+                // Show loading indicator
+                document.getElementById('api-test-loading').classList.remove('d-none');
+                document.getElementById('api-test-results').classList.add('d-none');
+                
+                // Call the API test endpoint
+                fetch('/api/test')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Hide loading indicator
+                        document.getElementById('api-test-loading').classList.add('d-none');
+                        
+                        // Show results
+                        const resultsContainer = document.getElementById('api-test-results');
+                        resultsContainer.classList.remove('d-none');
+                        
+                        // Format the results
+                        const placesApiStatus = data.tests.places_api.status;
+                        const isSuccess = placesApiStatus === 'OK';
+                        
+                        resultsContainer.innerHTML = `
+                            <div class="alert ${isSuccess ? 'alert-success' : 'alert-danger'}">
+                                <h6 class="alert-heading">${isSuccess ? 'API Key is working!' : 'API Key issue detected'}</h6>
+                                <p><strong>Google Places API Status:</strong> ${placesApiStatus}</p>
+                                ${data.tests.places_api.error_message ? 
+                                    `<p><strong>Error Message:</strong> ${data.tests.places_api.error_message}</p>` : ''}
+                                <p><strong>API Key ending in:</strong> ...${data.key_info.key_last_4}</p>
+                                <p><strong>Test Time:</strong> ${data.key_info.test_timestamp}</p>
+                            </div>
+                            
+                            ${!isSuccess ? `
+                            <div class="mt-3">
+                                <h6>Troubleshooting Tips:</h6>
+                                <ul>
+                                    <li>Make sure the Places API is enabled in your Google Cloud Console</li>
+                                    <li>Check that your API key has the proper restrictions set up</li>
+                                    <li>If using HTTP referrers, ensure you have included both your domain AND *.googleapis.com</li>
+                                    <li>You may need to temporarily remove API key restrictions for testing</li>
+                                    <li>Verify that billing is enabled for your Google Cloud account</li>
+                                </ul>
+                            </div>
+                            ` : ''}
+                            
+                            ${isSuccess ? `
+                            <div class="alert alert-info mt-3">
+                                <p><strong>Results found:</strong> ${data.tests.places_api.results_count}</p>
+                                <p>The Google Places API is properly configured and ready to use!</p>
+                            </div>
+                            ` : ''}
+                        `;
+                    })
+                    .catch(error => {
+                        // Hide loading indicator
+                        document.getElementById('api-test-loading').classList.add('d-none');
+                        
+                        // Show error
+                        const resultsContainer = document.getElementById('api-test-results');
+                        resultsContainer.classList.remove('d-none');
+                        resultsContainer.innerHTML = `
+                            <div class="alert alert-danger">
+                                <h6 class="alert-heading">Test Failed</h6>
+                                <p>An error occurred while testing the API:</p>
+                                <p><code>${error.message}</code></p>
+                            </div>
+                        `;
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
