@@ -106,26 +106,26 @@
                     
                     <!-- Price Range Filter -->
                     <div class="filter-section mb-4">
-                        <h5>Price Range</h5>
+                        <h5>Price Level</h5>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="all" id="price-all" checked>
                             <label class="form-check-label" for="price-all">Any Price</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="1" id="price-1">
-                            <label class="form-check-label" for="price-1">$</label>
+                            <label class="form-check-label" for="price-1">$ (Inexpensive)</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="2" id="price-2">
-                            <label class="form-check-label" for="price-2">$$</label>
+                            <label class="form-check-label" for="price-2">$$ (Moderate)</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="3" id="price-3">
-                            <label class="form-check-label" for="price-3">$$$</label>
+                            <label class="form-check-label" for="price-3">$$$ (Expensive)</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="4" id="price-4">
-                            <label class="form-check-label" for="price-4">$$$$</label>
+                            <label class="form-check-label" for="price-4">$$$$ (Very Expensive)</label>
                         </div>
                     </div>
                     
@@ -148,13 +148,29 @@
             <div class="col-md-9 col-lg-10 d-flex flex-column" id="main-content">
                 <!-- Map Container -->
                 <div class="map-container flex-grow-1">
+                    <div class="map-hint-overlay position-absolute top-0 end-0 m-3 p-2 bg-dark bg-opacity-75 rounded shadow-sm">
+                        <small><i class="fas fa-mouse-pointer me-1"></i> Click anywhere on the map to search that location</small>
+                    </div>
                     <div id="map"></div>
                 </div>
                 
                 <!-- Restaurant List -->
                 <div class="restaurant-list-container">
                     <div class="container-fluid py-3">
-                        <h4>Nearby Restaurants <span id="restaurant-count" class="badge bg-primary">0</span></h4>
+                        <div class="d-md-flex d-block justify-content-between align-items-center mb-3">
+                        <h4 class="mb-3 mb-md-0">Nearby Restaurants <span id="restaurant-count" class="badge bg-primary">0</span></h4>
+                        <div class="restaurant-picker-buttons">
+                        <button id="pick-one-restaurant" class="btn btn-primary me-md-2">
+                        <i class="fas fa-dice me-1"></i> 1 Restaurant
+                        </button>
+                        <button id="pick-three-restaurants" class="btn btn-success">
+                        <i class="fas fa-random me-1"></i> 3 Random Restaurants
+                        </button>
+                        </div>
+                        </div>
+                        
+                        <!-- Restaurant picker will now be shown in a modal -->
+                        
                         <div id="restaurant-list" class="row g-3">
                             <!-- Restaurant cards will be dynamically added here -->
                             <div id="no-results" class="col-12 text-center py-5">
@@ -206,10 +222,33 @@
     <!-- Custom JS - Load these first to define the functions -->
     <script src="{{ url_for('static', filename='js/filters.js') }}"></script>
     <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/enhanced-restaurant-picker.js') }}"></script>
     
     <!-- Google Maps API - Load this after our scripts to call the functions -->
     <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=initMap" async defer></script>
     
+    <!-- Restaurant Picker Modal -->
+    <div class="modal fade" id="restaurant-picker-modal" tabindex="-1" aria-labelledby="restaurant-picker-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="restaurant-picker-modal-label">Random Restaurant Picker</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <div id="restaurant-picker-content">
+                        <div class="row g-4" id="restaurant-picker-cards">
+                            <!-- Restaurant cards will be dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- API Test Modal -->
     <div class="modal fade" id="api-test-modal" tabindex="-1" aria-labelledby="api-test-modal-label" aria-hidden="true">
         <div class="modal-dialog">
@@ -256,8 +295,13 @@
                 document.getElementById('api-test-results').classList.add('d-none');
                 
                 // Call the API test endpoint
-                fetch('/api/test')
-                    .then(response => response.json())
+                fetch('/api/test', { headers: { 'Accept': 'application/json' } })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Server responded with status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         // Hide loading indicator
                         document.getElementById('api-test-loading').classList.add('d-none');
@@ -313,6 +357,16 @@
                                 <h6 class="alert-heading">Test Failed</h6>
                                 <p>An error occurred while testing the API:</p>
                                 <p><code>${error.message}</code></p>
+                                <div class="mt-3">
+                                    <h6>Troubleshooting Tips:</h6>
+                                    <ul>
+                                        <li>Check that your Flask server is running</li>
+                                        <li>Verify that the GOOGLE_API_KEY environment variable is set</li>
+                                        <li>Make sure the Places API is enabled in your Google Cloud Console</li>
+                                        <li>Ensure your API key has the proper restrictions set up</li>
+                                        <li>Look for any errors in your server console output</li>
+                                    </ul>
+                                </div>
                             </div>
                         `;
                     });

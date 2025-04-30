@@ -132,6 +132,15 @@ function initMap() {
     
     // Set up event listeners
     setupEventListeners();
+    
+    // Add click event listener to map for location-based search
+    map.addListener("click", (event) => {
+        const clickedLocation = {
+            lat: event.latLng.lat(),
+            lng: event.latLng.lng()
+        };
+        searchAtLocation(clickedLocation);
+    });
 }
 
 // Get user's current location
@@ -289,6 +298,17 @@ function displayRestaurants(restaurantList) {
     
     // Update restaurant count
     document.getElementById("restaurant-count").textContent = restaurantList.length;
+    
+    // Add the no-results div back to the container first
+    const noResultsDiv = document.createElement("div");
+    noResultsDiv.id = "no-results";
+    noResultsDiv.className = "col-12 text-center py-5";
+    noResultsDiv.innerHTML = `
+        <i class="fas fa-utensils fa-3x mb-3 text-muted"></i>
+        <h5>No restaurants found</h5>
+        <p class="text-muted">Try adjusting your filters or search in a different area</p>
+    `;
+    restaurantListContainer.appendChild(noResultsDiv);
     
     // Show "no results" message if no restaurants found
     if (restaurantList.length === 0) {
@@ -667,6 +687,12 @@ function searchRestaurants() {
         return;
     }
     
+    // Make sure we have a current position
+    if (!currentPosition) {
+        showError("Your location is not available. Please click 'Locate Me' first.");
+        return;
+    }
+    
     showLoadingIndicator();
     
     // Use the Google Maps geolocation API directly via our server
@@ -744,48 +770,176 @@ function searchRestaurants() {
 function applyFilters() {
     // Check if we have restaurants to filter
     if (restaurants.length === 0) {
+        showError("No restaurants available to filter. Please search for restaurants first.");
         return;
     }
     
-    showLoadingIndicator();
-    
-    // Get filter values
-    const typeFilters = getCheckboxValues("type");
-    const cuisineFilters = getCheckboxValues("cuisine");
-    const priceFilters = getCheckboxValues("price");
-    const ratingFilter = parseFloat(document.getElementById("rating-slider").value);
-    
-    // Filter restaurants
-    const filteredRestaurants = restaurants.filter(restaurant => {
-        // Check restaurant type (Fast Food vs. Sit-down)
-        const isFastFood = restaurant.types.some(type => 
-            ["meal_takeaway", "fast_food"].includes(type)
-        );
+    try {
+        showLoadingIndicator();
         
-        const typeMatch = typeFilters.includes("all") || 
-            (isFastFood && typeFilters.includes("fast-food")) || 
-            (!isFastFood && typeFilters.includes("sit-down"));
+        // Get filter values
+        const typeFilters = getCheckboxValues("type");
+        const cuisineFilters = getCheckboxValues("cuisine");
+        const priceFilters = getCheckboxValues("price");
+        const ratingFilter = parseFloat(document.getElementById("rating-slider").value);
         
-        // Check cuisine type
-        const cuisineMatch = cuisineFilters.includes("all") || 
-            cuisineFilters.some(cuisine => 
-                restaurant.types.includes(cuisine) || 
-                (restaurant.name && restaurant.name.toLowerCase().includes(cuisine))
+        console.log("Applied filters:", {
+            typeFilters,
+            cuisineFilters,
+            priceFilters,
+            ratingFilter
+        });
+        
+        console.log("Total restaurants before filtering:", restaurants.length);
+        
+        // Price debug - check all restaurant price levels before filtering
+        console.log("Restaurant price levels:");
+        const priceDistribution = {};
+        restaurants.forEach(restaurant => {
+            const price = restaurant.price_level;
+            const priceKey = price !== undefined ? price.toString() : "undefined";
+            priceDistribution[priceKey] = (priceDistribution[priceKey] || 0) + 1;
+        });
+        console.log("Price distribution:", priceDistribution);
+        
+        // Filter restaurants
+        const filteredRestaurants = restaurants.filter(restaurant => {
+            // For diagnostic purposes, log the first restaurant
+            if (restaurants.indexOf(restaurant) === 0) {
+                console.log("First restaurant data:", {
+                    name: restaurant.name,
+                    types: restaurant.types,
+                    price_level: restaurant.price_level,
+                    rating: restaurant.rating,
+                    cuisine: getCuisineTypes(restaurant)
+                });
+            }
+            // Check restaurant type (Fast Food vs. Sit-down)
+            const isFastFood = restaurant.types.some(type => 
+                ["meal_takeaway", "fast_food"].includes(type)
             );
+            
+            const typeMatch = typeFilters.includes("all") || 
+                (isFastFood && typeFilters.includes("fast-food")) || 
+                (!isFastFood && typeFilters.includes("sit-down"));
+            
+            // Check cuisine type
+            let cuisineMatch = false;
+            
+            if (cuisineFilters.includes("all")) {
+                cuisineMatch = true;
+            } else {
+                // Get cuisine type for this restaurant
+                const restaurantCuisine = getCuisineTypes(restaurant);
+                
+                // Check if any of the selected cuisines match
+                cuisineMatch = cuisineFilters.some(cuisine => {
+                    // Direct match with the identified cuisine
+                    if (restaurantCuisine === cuisine) {
+                        return true;
+                    }
+                    
+                    // Check if cuisine appears in restaurant name
+                    if (restaurant.name && restaurant.name.toLowerCase().includes(cuisine)) {
+                        return true;
+                    }
+                    
+                    // Check if cuisine appears in vicinity
+                    if (restaurant.vicinity && restaurant.vicinity.toLowerCase().includes(cuisine)) {
+                        return true;
+                    }
+                    
+                    return false;
+                });
+            }
+            
+            // Check price level - COMPLETELY REWRITTEN FOR EXACTNESS
+            let priceMatch = false;
+            const priceLevel = restaurant.price_level;
+            
+            if (priceFilters.includes("all")) {
+                // All prices selected
+                priceMatch = true;
+            } else if (typeof priceLevel !== 'undefined' && priceLevel !== null) {
+                // Exact price level matching: convert to string and check if included in selected filters
+                const priceLevelStr = priceLevel.toString();
+                priceMatch = priceFilters.includes(priceLevelStr);
+                
+                if (restaurants.indexOf(restaurant) < 3) {
+                    console.log(`👉 ${restaurant.name} price ${priceLevel} against filter ${priceFilters}: ${priceMatch}`);
+                }
+            } else if (priceFilters.includes("1")) {
+                // Special case: undefined price and user selected $ (often means inexpensive)
+                priceMatch = true;
+            }
+            
+            // Check rating
+            const ratingMatch = !restaurant.rating || restaurant.rating >= ratingFilter;
+            
+            // For diagnostic, log the first few restaurants' matching criteria
+            if (restaurants.indexOf(restaurant) < 3) {
+                console.log(`Filter results for ${restaurant.name}:`, {
+                    typeMatch,
+                    cuisineMatch,
+                    priceMatch,
+                    ratingMatch,
+                    overall: typeMatch && cuisineMatch && priceMatch && ratingMatch
+                });
+            }
+            
+            return typeMatch && cuisineMatch && priceMatch && ratingMatch;
+        });
         
-        // Check price level
-        const priceMatch = priceFilters.includes("all") || 
-            (restaurant.price_level && priceFilters.includes(restaurant.price_level.toString()));
+        // Display filtered restaurants - EXTRA SANITY CHECK
+        // Double check that we don't include any wrong price level restaurants
+        if (!priceFilters.includes("all")) {
+            const filteredAndVerified = filteredRestaurants.filter(restaurant => {
+                // Skip restaurants where price filter doesn't match exactly
+                const priceLevel = restaurant.price_level;
+                if (typeof priceLevel !== 'undefined' && priceLevel !== null) {
+                    return priceFilters.includes(priceLevel.toString());
+                }
+                // Keep restaurants with undefined price only if "1" (inexpensive) is selected
+                return priceFilters.includes("1");
+            });
+            
+            console.log(`Verified: ${filteredAndVerified.length} of ${filteredRestaurants.length} match exact price filter`);
+            displayRestaurants(filteredAndVerified);
+        } else {
+            displayRestaurants(filteredRestaurants);
+        }
         
-        // Check rating
-        const ratingMatch = !restaurant.rating || restaurant.rating >= ratingFilter;
+        // Count results per price level after filtering
+        // We need to look at what's actually being displayed
+        const finalRestaurants = !priceFilters.includes("all") ?
+            filteredRestaurants.filter(r => {
+                const priceLevel = r.price_level;
+                if (typeof priceLevel !== 'undefined' && priceLevel !== null) {
+                    return priceFilters.includes(priceLevel.toString());
+                }
+                return priceFilters.includes("1");
+            }) : filteredRestaurants;
         
-        return typeMatch && cuisineMatch && priceMatch && ratingMatch;
-    });
-    
-    // Display filtered restaurants
-    displayRestaurants(filteredRestaurants);
-    hideLoadingIndicator();
+        const filteredPriceDistribution = {};
+        finalRestaurants.forEach(restaurant => {
+            const price = restaurant.price_level;
+            const priceKey = price !== undefined ? price.toString() : "undefined";
+            filteredPriceDistribution[priceKey] = (filteredPriceDistribution[priceKey] || 0) + 1;
+        });
+        console.log("FINAL Filtered price distribution:", filteredPriceDistribution);
+        
+        // Show message if no results after filtering
+        if (filteredRestaurants.length === 0) {
+            showError("No restaurants match your filters. Try adjusting your filter criteria.");
+        } else {
+            showInfo(`Found ${filteredRestaurants.length} restaurants matching your filters`);
+        }
+    } catch (error) {
+        console.error("Error applying filters:", error);
+        showError("Error applying filters: " + error.message);
+    } finally {
+        hideLoadingIndicator();
+    }
 }
 
 // Helper function to get checkbox values
@@ -801,7 +955,7 @@ function formatType(type) {
 
 // Helper function to display price level
 function getDisplayPrice(priceLevel) {
-    if (!priceLevel && priceLevel !== 0) {
+    if (priceLevel === undefined || priceLevel === null) {
         return "Price N/A";
     }
     
@@ -825,13 +979,23 @@ function hideLoadingIndicator() {
 
 // Show error message
 function showError(message) {
+    showToast(message, 'danger', 'exclamation-circle');
+}
+
+// Show info message
+function showInfo(message) {
+    showToast(message, 'info', 'info-circle');
+}
+
+// Generic toast function
+function showToast(message, type = 'danger', icon = 'exclamation-circle') {
     // Create toast element
-    const toastId = 'error-toast-' + Date.now();
+    const toastId = 'toast-' + Date.now();
     const toastHTML = `
-        <div id="${toastId}" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body">
-                    <i class="fas fa-exclamation-circle me-2"></i> ${message}
+                    <i class="fas fa-${icon} me-2"></i> ${message}
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
@@ -859,4 +1023,31 @@ function showError(message) {
 // Show location error
 function showLocationError() {
     showError("Could not get your location. Please enable location services and refresh the page.");
+}
+
+// Search for restaurants at a specific location
+function searchAtLocation(location) {
+    // Add a marker at the clicked location
+    if (userMarker) {
+        userMarker.setMap(null);
+    }
+    
+    if (userCircle) {
+        userCircle.setMap(null);
+    }
+    
+    // Update current position to clicked location
+    currentPosition = location;
+    
+    // Add marker at the location
+    addUserMarker(location);
+    
+    // Center map on clicked location
+    map.setCenter(location);
+    
+    // Search for restaurants
+    searchNearbyRestaurants(location);
+    
+    // Show a toast message
+    showInfo("Searching for restaurants at this location");
 }

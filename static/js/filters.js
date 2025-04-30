@@ -21,6 +21,11 @@ function setupAllCheckboxBehavior(groupName) {
     const allCheckbox = document.getElementById(`${groupName}-all`);
     const otherCheckboxes = document.querySelectorAll(`input[id^="${groupName}-"]:not([id="${groupName}-all"])`);
     
+    if (!allCheckbox) {
+        console.error(`Missing checkbox with id ${groupName}-all`);
+        return;
+    }
+    
     // When "All" is checked, uncheck others
     allCheckbox.addEventListener('change', function() {
         if (this.checked) {
@@ -50,6 +55,17 @@ function setupAllCheckboxBehavior(groupName) {
             }
         });
     });
+    
+    // Make sure the "All" checkbox is checked if no other checkboxes are checked
+    function ensureSelection() {
+        const anyChecked = Array.from(otherCheckboxes).some(cb => cb.checked);
+        if (!anyChecked) {
+            allCheckbox.checked = true;
+        }
+    }
+    
+    // Run this once at initialization
+    ensureSelection();
 }
 
 // Set up mobile filter toggle functionality
