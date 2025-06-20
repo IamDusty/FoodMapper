@@ -1,4 +1,35 @@
-// Enhanced Restaurant Random Picker Functionality
+// Custom toast function for restaurant picker
+function showToast(message, type = 'success', icon = 'check-circle') {
+    // Check if we need to create a toast container
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Create toast element
+    const toastId = 'toast-' + Date.now();
+    const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${icon} me-2"></i> ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    // Add toast to container
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+    
+    // Initialize and show toast
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, { autohide: true, delay: 3000 });
+    toast.show();
+}// Enhanced Restaurant Random Picker Functionality
 let currentPickedRestaurants = [];
 let restaurantPickerModal;
 
@@ -74,7 +105,7 @@ function pickRandomRestaurants(count) {
         cardDiv.innerHTML = createRestaurantCardHTML(picks[0], 0);
         restaurantCardsContainer.appendChild(cardDiv);
     } else {
-        // Three cards in a row (left, center, right)
+        // Multiple cards in a row
         picks.forEach((restaurant, index) => {
             const cardDiv = document.createElement('div');
             cardDiv.className = 'col-md-4';
@@ -82,6 +113,9 @@ function pickRandomRestaurants(count) {
             restaurantCardsContainer.appendChild(cardDiv);
         });
     }
+    
+    // Show success message
+    showToast(`Found ${picks.length} great ${picks.length === 1 ? 'option' : 'options'} for you!`, 'success', 'check-circle');
     
     // Add event listeners to buttons
     picks.forEach((restaurant, index) => {
@@ -123,7 +157,7 @@ function createRestaurantCardHTML(restaurant, index) {
     
     return `
         <div class="card h-100 restaurant-picker-card">
-            <div class="card-img-top d-flex align-items-center justify-content-center bg-dark">
+            <div class="card-img-container d-flex align-items-center justify-content-center">
                 <i class="fas fa-utensils fa-3x text-light opacity-50"></i>
             </div>
             <div class="card-body">
@@ -131,7 +165,7 @@ function createRestaurantCardHTML(restaurant, index) {
                     <h5 class="card-title">
                         <a href="${searchUrl}" target="_blank" class="restaurant-name-link">${restaurant.name}</a>
                     </h5>
-                    <span class="restaurant-rating">${restaurant.rating ? restaurant.rating.toFixed(1) : "N/A"} ⭐</span>
+                    <span class="restaurant-rating"><i class="fas fa-star me-1"></i>${restaurant.rating ? restaurant.rating.toFixed(1) : "N/A"}</span>
                 </div>
                 <h6 class="card-subtitle mb-2 text-muted">${restaurant.vicinity}</h6>
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -140,9 +174,11 @@ function createRestaurantCardHTML(restaurant, index) {
                 </div>
             </div>
             <div class="card-footer bg-transparent d-flex justify-content-between">
-                <button class="btn btn-sm btn-outline-primary view-details-btn" data-place-id="${restaurant.place_id}">View Details</button>
+                <button class="btn btn-sm btn-outline-primary view-details-btn" data-place-id="${restaurant.place_id}">
+                    <i class="fas fa-info-circle me-1"></i> Details
+                </button>
                 <button class="btn btn-sm btn-outline-info shuffle-btn" data-index="${index}">
-                    <i class="fas fa-random"></i> Shuffle
+                    <i class="fas fa-random me-1"></i> Shuffle
                 </button>
             </div>
         </div>
@@ -210,6 +246,6 @@ function shuffleRestaurant(indexToShuffle) {
         card.style.animation = 'fadeIn 0.5s';
         
         // Show a success message
-        showInfo("Restaurant shuffled successfully!");
+        showToast("Found a new option for you!", 'success', 'check-circle');
     }
 }

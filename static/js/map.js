@@ -453,10 +453,13 @@ function addRestaurantToList(restaurant, index) {
     restaurantCard.className = "col-md-6 col-lg-4 fade-in";
     restaurantCard.innerHTML = `
         <div class="card h-100 restaurant-card">
+            <div class="card-img-container">
+                <i class="fas fa-utensils fa-2x text-light opacity-50"></i>
+            </div>
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <h5 class="card-title">${restaurant.name}</h5>
-                    <span class="restaurant-rating">${restaurant.rating ? restaurant.rating.toFixed(1) : "N/A"} ⭐</span>
+                    <span class="restaurant-rating"><i class="fas fa-star me-1"></i>${restaurant.rating ? restaurant.rating.toFixed(1) : "N/A"}</span>
                 </div>
                 <h6 class="card-subtitle mb-2 text-muted">${restaurant.vicinity}</h6>
                 <div class="d-flex justify-content-between align-items-center">
@@ -465,9 +468,11 @@ function addRestaurantToList(restaurant, index) {
                 </div>
             </div>
             <div class="card-footer bg-transparent">
-                <button class="btn btn-sm btn-outline-primary view-details-btn" data-place-id="${restaurant.place_id}">View Details</button>
+                <button class="btn btn-sm btn-outline-primary view-details-btn" data-place-id="${restaurant.place_id}">
+                    <i class="fas fa-info-circle me-1"></i> Details
+                </button>
                 <button class="btn btn-sm btn-outline-secondary ms-2 directions-btn" data-lat="${restaurant.geometry.location.lat}" data-lng="${restaurant.geometry.location.lng}">
-                    <i class="fas fa-directions"></i>
+                    <i class="fas fa-directions me-1"></i> Directions
                 </button>
             </div>
         </div>
@@ -985,6 +990,84 @@ function showError(message) {
 // Show info message
 function showInfo(message) {
     showToast(message, 'info', 'info-circle');
+}
+
+// Sort restaurants based on the specified sort type
+function sortRestaurants(sortType) {
+    if (!restaurants || restaurants.length === 0) {
+        return;
+    }
+    
+    // Create a copy of the restaurants array to sort
+    const sortedRestaurants = [...restaurants];
+    
+    // Sort based on the specified type
+    switch (sortType) {
+        case 'rating-desc':
+            sortedRestaurants.sort((a, b) => {
+                const ratingA = a.rating || 0;
+                const ratingB = b.rating || 0;
+                return ratingB - ratingA;
+            });
+            break;
+            
+        case 'rating-asc':
+            sortedRestaurants.sort((a, b) => {
+                const ratingA = a.rating || 0;
+                const ratingB = b.rating || 0;
+                return ratingA - ratingB;
+            });
+            break;
+            
+        case 'price-asc':
+            sortedRestaurants.sort((a, b) => {
+                const priceA = a.price_level !== undefined ? a.price_level : 0;
+                const priceB = b.price_level !== undefined ? b.price_level : 0;
+                return priceA - priceB;
+            });
+            break;
+            
+        case 'price-desc':
+            sortedRestaurants.sort((a, b) => {
+                const priceA = a.price_level !== undefined ? a.price_level : 0;
+                const priceB = b.price_level !== undefined ? b.price_level : 0;
+                return priceB - priceA;
+            });
+            break;
+            
+        case 'distance':
+            // Sort by distance from current position if available
+            if (currentPosition) {
+                sortedRestaurants.sort((a, b) => {
+                    const distanceA = getDistance(currentPosition, a.geometry.location);
+                    const distanceB = getDistance(currentPosition, b.geometry.location);
+                    return distanceA - distanceB;
+                });
+            }
+            break;
+            
+        default: // 'relevance' - original order from API
+            // No sorting needed, keep original order
+            break;
+    }
+    
+    // Display the sorted restaurants
+    displayRestaurants(sortedRestaurants);
+    
+    // Show info toast
+    showInfo(`Restaurants sorted by ${sortType.replace('-', ' ')}`);
+}
+
+// Calculate distance between two points (Haversine formula)
+function getDistance(point1, point2) {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+    const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
 }
 
 // Generic toast function

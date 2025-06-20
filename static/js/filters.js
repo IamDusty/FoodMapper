@@ -1,4 +1,62 @@
-// Filter management logic
+// Set up price button behavior to work with checkboxes
+function setupPriceButtonBehavior() {
+    const priceButtons = document.querySelectorAll('input[id^="price-"]:not([id="price-all"])');
+    const priceAllCheckbox = document.getElementById('price-all');
+    
+    if (priceButtons.length > 0 && priceAllCheckbox) {
+        // When any price button is clicked
+        priceButtons.forEach(button => {
+            button.addEventListener('change', function() {
+                // If this button is checked
+                if (this.checked) {
+                    // Uncheck the 'All' checkbox
+                    priceAllCheckbox.checked = false;
+                } else {
+                    // If no other buttons are checked, check the 'All' checkbox
+                    const anyChecked = Array.from(priceButtons).some(btn => btn.checked);
+                    if (!anyChecked) {
+                        priceAllCheckbox.checked = true;
+                    }
+                }
+            });
+        });
+        
+        // When 'All' checkbox is clicked
+        priceAllCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                // Uncheck all price buttons
+                priceButtons.forEach(button => {
+                    button.checked = false;
+                });
+            }
+        });
+    }
+}
+
+// Setup animation effects for UI elements
+function setupAnimationEffects() {
+    // Add hover effects to filter sections
+    const filterSections = document.querySelectorAll('.filter-section');
+    filterSections.forEach(section => {
+        section.addEventListener('mouseenter', function() {
+            this.classList.add('active-section');
+        });
+        section.addEventListener('mouseleave', function() {
+            this.classList.remove('active-section');
+        });
+    });
+    
+    // Add animation to the apply filters button
+    const applyFiltersBtn = document.getElementById('apply-filters');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', function() {
+            this.classList.add('btn-pulse');
+            setTimeout(() => {
+                this.classList.remove('btn-pulse');
+            }, 500);
+        });
+    }
+}// Filter management logic
 
 // Initialize filter checkboxes when page loads
 document.addEventListener('DOMContentLoaded', function() {
@@ -12,8 +70,14 @@ function initializeFilters() {
     setupAllCheckboxBehavior('cuisine');
     setupAllCheckboxBehavior('price');
     
+    // Set up price button behavior (to match checkbox behavior)
+    setupPriceButtonBehavior();
+    
     // Enable mobile filter toggle
     setupMobileFilterToggle();
+    
+    // Setup animation effects
+    setupAnimationEffects();
 }
 
 // Set up the "All" checkbox behavior for a filter group
@@ -70,30 +134,31 @@ function setupAllCheckboxBehavior(groupName) {
 
 // Set up mobile filter toggle functionality
 function setupMobileFilterToggle() {
-    // Add button to navbar for mobile
-    const navbar = document.querySelector('.navbar-collapse');
-    if (navbar) {
-        const filterToggleBtn = document.createElement('button');
-        filterToggleBtn.id = 'filter-toggle-btn';
-        filterToggleBtn.className = 'btn btn-outline-light d-md-none ms-2';
-        filterToggleBtn.innerHTML = '<i class="fas fa-filter"></i> Filters';
-        
-        navbar.appendChild(filterToggleBtn);
-        
+    // The toggle button is now in the HTML template as a map control
+    const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
+    const closeFiltersBtn = document.getElementById('close-filters');
+    const filtersSidebar = document.getElementById('filters-sidebar');
+    
+    if (toggleFiltersBtn && closeFiltersBtn && filtersSidebar) {
         // Add event listener to toggle filters sidebar
-        filterToggleBtn.addEventListener('click', function() {
-            const filtersSidebar = document.getElementById('filters-sidebar');
+        toggleFiltersBtn.addEventListener('click', function() {
             filtersSidebar.classList.toggle('show');
+        });
+        
+        // Add event listener to close filters
+        closeFiltersBtn.addEventListener('click', function() {
+            filtersSidebar.classList.remove('show');
         });
         
         // Close filters when a filter is applied on mobile
         const applyFiltersBtn = document.getElementById('apply-filters');
-        applyFiltersBtn.addEventListener('click', function() {
-            const filtersSidebar = document.getElementById('filters-sidebar');
-            if (window.innerWidth < 768) {
-                filtersSidebar.classList.remove('show');
-            }
-        });
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', function() {
+                if (window.innerWidth < 768) {
+                    filtersSidebar.classList.remove('show');
+                }
+            });
+        }
     }
 }
 
